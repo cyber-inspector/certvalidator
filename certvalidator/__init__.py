@@ -137,6 +137,57 @@ class CertificateValidator():
 
         raise exceptions[0]
 
+    def _validate_path_custom(self):
+        """
+        Builds possible certificate paths and validates them until a valid one
+        is found, or all fail.
+
+        :raises:
+            certvalidator.errors.PathValidationError - when an error occurs validating the path
+            certvalidator.errors.RevokedError - when the certificate or another certificate in its path has been revoked
+        """
+
+        if self._path is not None:
+            return
+
+        exceptions = []
+
+        if self._certificate.hash_algo in self._context.weak_hash_algos:
+            raise InvalidCertificateError(pretty_message(
+                '''
+                The X.509 certificate provided has a signature using the weak
+                hash algorithm %s
+                ''',
+                self._certificate.hash_algo
+            ))
+
+        try:
+            paths = self._context.certificate_registry.build_paths(self._certificate)
+        except (PathBuildingError) as e:
+            if self._certificate.self_signed in set(['yes', 'maybe']):
+                raise InvalidCertificateError(pretty_message(
+                    '''
+                    The X.509 certificate provided is self-signed - "%s"
+                    ''',
+                    self._certificate.subject.human_friendly
+                ))
+            raise
+
+        parsed_paths = {
+            'valid': [],
+            'invalid': []
+        }
+
+        for candidate_path in paths:
+            try:
+                validate_path(self._context, candidate_path)
+                self._path = candidate_path
+                parsed_paths["valid"].append(self._path)
+            except (ValidationError) as e:
+                parsed_paths["invalid"].append({'path': self._path, 'exception': e})
+
+        return parsed_paths
+
     def validate_usage(self, key_usage, extended_key_usage=None, extended_optional=False):
         """
         Validates the certificate path and that the certificate is valid for
