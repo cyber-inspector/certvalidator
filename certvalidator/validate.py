@@ -1240,7 +1240,7 @@ def verify_crl(cert, path, validation_context, use_deltas=True, cert_description
     distribution_point_map = {}
     sources = [cert.crl_distribution_points]
     if use_deltas:
-        sources.extend(cert.delta_crl_distribution_points)
+        sources.extend([cert.delta_crl_distribution_points])
     for dp_list in sources:
         for distribution_point in dp_list:
             if isinstance(distribution_point['crl_issuer'], x509.GeneralNames):
