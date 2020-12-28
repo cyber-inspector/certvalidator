@@ -147,8 +147,15 @@ class CertificateValidator():
             certvalidator.errors.RevokedError - when the certificate or another certificate in its path has been revoked
         """
 
+
+        parsed_paths = {
+            'valid': [],
+            'invalid': [],
+            'exceptions': []
+        }
+
         if self._path is not None:
-            return
+            parsed_paths["exceptions"].append('path has already been calcualated')
 
         exceptions = []
 
@@ -173,15 +180,11 @@ class CertificateValidator():
                 ))
             raise
 
-        parsed_paths = {
-            'valid': [],
-            'invalid': []
-        }
-
         for candidate_path in paths:
             try:
                 validate_path(self._context, candidate_path)
-                self._path = candidate_path
+                if not self._path:
+                    self._path = candidate_path
                 parsed_paths["valid"].append(self._path)
             except (ValidationError) as e:
                 parsed_paths["invalid"].append({'path': self._path, 'exception': e})
